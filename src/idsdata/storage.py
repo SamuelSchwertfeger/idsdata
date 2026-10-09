@@ -18,7 +18,7 @@ _CHUNK_SIZE = 1024 * 1024
 
 
 class DataNotFoundError(FileNotFoundError):
-    """Raised when none of a release's files are in the data directory."""
+    """Raised when files of a release are not in the data directory."""
 
 
 class ChecksumsUnavailableError(LookupError):
@@ -87,7 +87,12 @@ def pointer(release: Release, directory: Path) -> str:
 
 
 def verify(name: str, version: str, data_dir: str | os.PathLike[str] | None = None) -> tuple[Path, ...]:
-    """Check every file of a release that is present and return the verified paths."""
+    """Check the files of a release and return the verified paths.
+
+    Every file that is present is checked. A table that is absent is accepted
+    only when its archive is present, because ``load`` unpacks it from there.
+    Otherwise ``DataNotFoundError`` names the tables that are missing.
+    """
     release = get_release(name, version)
     directory = data_root(data_dir) / release.name / release.version
     if not release.files:
@@ -99,4 +104,12 @@ def verify(name: str, version: str, data_dir: str | os.PathLike[str] | None = No
         raise DataNotFoundError(pointer(release, directory))
     for entry, path in present:
         check(entry, path)
+    here = {entry.name for entry, _ in present}
+    missing = [
+        entry.name
+        for entry in release.files
+        if entry.kind == 'table' and entry.name not in here and entry.archive not in here
+    ]
+    if missing:
+        raise DataNotFoundError(f'missing: {", ".join(missing)}\n{pointer(release, directory)}')
     return tuple(path for _, path in present)

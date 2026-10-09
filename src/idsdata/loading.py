@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import zipfile
 
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 
     from idsdata.model import FileEntry, Release
 
-# Bump when the columns written to the parquet cache change.
+# Bump when the way the parquet cache is built changes.
 CACHE_VERSION = 1
 
 _ARROW_TYPES: dict[str, pa.DataType] = {'int64': pa.int64(), 'double': pa.float64(), 'string': pa.string()}
@@ -60,8 +61,13 @@ def _extract_missing(release: Release, directory: Path, selected: list[FileEntry
             check(archives[entry.archive], archive_path)
             checked.add(entry.archive)
         partial = target.with_name(target.name + '.part')
-        with zipfile.ZipFile(archive_path) as archive, archive.open(entry.name) as source, partial.open('wb') as sink:
-            shutil.copyfileobj(source, sink)
+        with zipfile.ZipFile(archive_path) as archive:
+            try:
+                source = archive.open(entry.name)
+            except KeyError:
+                raise ValueError(f'{archive_path} has no member named {entry.name}') from None
+            with source, partial.open('wb') as sink:
+                shutil.copyfileobj(source, sink)
         _ = partial.replace(target)
 
 
@@ -88,9 +94,15 @@ def _read_table(release: Release, entry: FileEntry, path: Path) -> pa.Table:
     return table.append_column('source_file', pa.repeat(pa.scalar(entry.name, pa.string()), table.num_rows))
 
 
+def _mapping_key(release: Release) -> str:
+    """Changes whenever the recorded columns or labels do, so an old cache is not served after an edit."""
+    return hashlib.sha256(repr((release.columns, release.labels)).encode()).hexdigest()[:8]
+
+
 def _cached_table(release: Release, entry: FileEntry, directory: Path) -> pa.Table:
     stem = entry.name.rsplit('.', 1)[0]
-    cache = directory / 'cache' / f'{stem}.{entry.sha256[:12]}.v{CACHE_VERSION}.parquet'
+    name = f'{stem}.{entry.sha256[:12]}.{_mapping_key(release)}.v{CACHE_VERSION}.parquet'
+    cache = directory / 'cache' / name
     if cache.is_file():
         return pq.read_table(cache)
     table = _read_table(release, entry, directory / entry.name)
