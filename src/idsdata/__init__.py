@@ -6,6 +6,7 @@ from importlib.metadata import version as _package_version
 from typing import TYPE_CHECKING
 
 from idsdata import registry
+from idsdata.downloading import DownloadNotAllowedError, download
 from idsdata.model import Citation, Column, FileEntry, Label, Release
 from idsdata.registry import UnknownDatasetError
 from idsdata.storage import ChecksumMismatchError, ChecksumsUnavailableError, DataNotFoundError, verify
@@ -25,6 +26,7 @@ __all__ = [
     'Citation',
     'Column',
     'DataNotFoundError',
+    'DownloadNotAllowedError',
     'FileEntry',
     'Label',
     'Release',
@@ -32,6 +34,7 @@ __all__ = [
     '__version__',
     'cite',
     'datasets',
+    'download',
     'info',
     'load',
     'verify',
