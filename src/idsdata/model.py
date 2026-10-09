@@ -34,7 +34,12 @@ class Citation:
 
 @dataclass(frozen=True)
 class FileEntry:
-    """One file of a release. ``archive`` names the archive a table is packed in."""
+    """One file of a release.
+
+    ``archive`` names the archive a table is packed in and ``member`` its path
+    inside that archive when the path is not just ``name``. ``rows`` counts the
+    flows; ``blank_rows`` counts lines that hold no value at all.
+    """
 
     name: str
     sha256: str
@@ -43,6 +48,8 @@ class FileEntry:
     archive: str | None = None
     url: str | None = None
     rows: int | None = None
+    member: str | None = None
+    blank_rows: int = 0
 
 
 @dataclass(frozen=True)
@@ -83,3 +90,5 @@ class Release:
     # Clean name of the column that holds the flow time, and its strptime format.
     time_column: str | None = None
     time_format: str | None = None
+    # Text encoding of the tables, as a Python codec name.
+    encoding: str = 'utf8'

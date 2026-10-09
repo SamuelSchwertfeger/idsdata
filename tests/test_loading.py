@@ -169,8 +169,17 @@ def test_recorded_releases_are_consistent() -> None:
         clean = [column.name for column in release.columns]
         assert len(set(clean)) == len(clean)
         assert clean[-1] == 'label_raw'
+        repeats: dict[str, int] = {}
         for column in release.columns[:-1]:
-            assert column.name == re.sub(r'[^0-9a-z]+', '_', column.original.strip().lower()).strip('_')
+            # A column name that repeats in the source gets a number, like pandas gives it.
+            base = re.sub(r'[^0-9a-z]+', '_', column.original.strip().lower()).strip('_')
+            seen = repeats.get(base, 0)
+            assert column.name == (f'{base}_{seen}' if seen else base)
+            repeats[base] = seen + 1
+        types = {column.original: column.dtype for column in release.columns}
+        assert all(types[column.original] == column.dtype for column in release.columns)
+        for entry in release.files:
+            assert entry.member is None or entry.member.endswith('/' + entry.name)
         raw = [label.raw for label in release.labels]
         assert len(set(raw)) == len(raw)
         assert not any(label.is_attack and label.is_attempted for label in release.labels)

@@ -32,7 +32,7 @@ print(flows['label'].value_counts())
 print(idsdata.cite('cic-ids2017', 'engelen2021'))
 ```
 
-`load` keeps every row and every value as it is in the source files. It gives the columns clean names (`Flow Bytes/s` becomes `flow_bytes_s`), keeps the source label as `label_raw`, and adds four columns:
+`load` keeps every flow and every value as it is in the source files. It gives the columns clean names (`Flow Bytes/s` becomes `flow_bytes_s`), keeps the source label as `label_raw`, and adds four columns:
 
 | column | meaning |
 |---|---|
@@ -75,9 +75,17 @@ Things to know:
 | name | version | what it is | how you get it |
 |---|---|---|---|
 | `cic-ids2017` | `engelen2021` | Corrected flows and labels by Engelen, Rimmer and Joosen | `idsdata download`, or by hand from the authors' page |
-| `cic-ids2017` | `original` | The original release from the Canadian Institute for Cybersecurity | By hand, through the request form on the publisher's page |
+| `cic-ids2017` | `original-flows` | The original release from the Canadian Institute for Cybersecurity, with flow ids, addresses and timestamps (`GeneratedLabelledFlows.zip`) | By hand, through the request form on the publisher's page |
+| `cic-ids2017` | `original-ml` | The same flows without ids, addresses and timestamps (`MachineLearningCSV.zip`) | By hand, through the same form |
 
-No file hashes are recorded for `original` yet, so it cannot be verified or loaded. `idsdata info cic-ids2017 original` prints where to get it and how to cite it.
+For the two original versions, fill in the form, take the zip from the `CSVs` folder and put it in the directory `idsdata where cic-ids2017 original-flows` (or `original-ml`) prints. `verify` checks the zip and `load` unpacks it.
+
+Both original versions hold the same 2,830,743 flows in 15 classes. They are kept as published, and four things about them are worth knowing:
+
+- The column ` Fwd Header Length` appears twice in every file. Both are kept; the second is named `fwd_header_length_1`. In these files the two hold the same values.
+- One file of `original-flows` holds 288,602 lines without any value. `load` leaves them out. This is the only case where lines of a source file are not returned, and the number is recorded and checked.
+- The dash in the three web attack labels is not plain text. `original-flows` is read as Windows-1252, which makes it an en dash; in `original-ml` it is the Unicode replacement character. `label_raw` shows what the file holds, and `label` is the same in both (`web_attack_xss`).
+- The timestamps of `original-flows` come in more than one format and without AM or PM, so only the `random` split is offered for the original versions.
 
 ## Data policy
 
@@ -110,7 +118,7 @@ ids-lint --release cic-ids2017 engelen2021 *.csv
 ids-lint --rules
 ```
 
-The exit status is 1 when a rule of severity `error` fires. With `--strict`, warnings count as well. `--release` also checks that every label string in the file belongs to that release.
+The exit status is 1 when a rule of severity `error` fires. With `--strict`, warnings count as well. `--release` also checks that every label string in the file belongs to that release, and reads the file in the text encoding recorded for it.
 
 <!-- rules:start -->
 | id | rule | severity | what it flags | source |
@@ -127,9 +135,29 @@ The exit status is 1 when a rule of severity `error` fires. With `--strict`, war
 
 The linter reports and changes nothing. A warning is a prompt to decide, and what to do with the flagged rows or columns is up to you.
 
+## How it was tested
+
+- **Unit tests.** The test suite runs on every pull request, on Python 3.10 and 3.12 (GitHub Actions, Linux), together with `ruff` and `basedpyright`. They use small made-up files only, never real data: checksums, the download rules, loading, the cache, label mapping, both splits and every lint rule. The `random` split is pinned to exact rows, so a change in pandas that moves rows between train and test is noticed. One test checks that the rule table above matches the code.
+- **Real data, by hand.** The numbers in the registry (hashes, sizes, row counts, column names, label strings) were read from real downloads made on 2026-10-09, not typed in. The MD5 files the publisher ships with the original release match the two zips. These checks were then run on Windows 11 with Python 3.12, and are not part of CI because the data cannot be redistributed:
+
+| check | `engelen2021` | `original-flows` | `original-ml` |
+|---|---|---|---|
+| `verify` passes on the downloaded archive | yes | yes | yes |
+| `load` straight from the archive | 2,100,814 rows, 88 columns, 25 classes | 2,830,743 rows, 89 columns, 15 classes | 2,830,743 rows, 83 columns, 15 classes |
+| rows per file equal the recorded counts | yes | yes | yes |
+| `split(..., 'time')` train / test | 1,680,663 / 420,151 | not offered | not offered |
+| `split(..., 'random')` train / test | 1,680,661 / 420,153 | 2,264,600 / 566,143 | 2,264,600 / 566,143 |
+| every class on both sides of each split | yes | yes | yes |
+| `ids-lint --release` on every file: unknown label strings | none | none | none |
+| `ids-lint` rules that fire | IDS002, IDS004, IDS005, IDS006 | all six | all but IDS003 |
+
+The class counts of the two original versions are equal label by label.
+
+What was not tested: other operating systems and Python versions with real data, and `idsdata download` beyond the one release that has a direct link.
+
 ## Not in this version
 
-- Checksums for the `original` release.
+- A time split for the original versions.
 - Other datasets.
 
 ## Acknowledgements

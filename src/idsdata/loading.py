@@ -61,23 +61,47 @@ def _extract_missing(release: Release, directory: Path, selected: list[FileEntry
             check(archives[entry.archive], archive_path)
             checked.add(entry.archive)
         partial = target.with_name(target.name + '.part')
+        member = entry.member or entry.name
         with zipfile.ZipFile(archive_path) as archive:
             try:
-                source = archive.open(entry.name)
+                source = archive.open(member)
             except KeyError:
-                raise ValueError(f'{archive_path} has no member named {entry.name}') from None
+                raise ValueError(f'{archive_path} has no member named {member}') from None
             with source, partial.open('wb') as sink:
                 shutil.copyfileobj(source, sink)
         _ = partial.replace(target)
 
 
+def _drop_blank_rows(table: pa.Table, entry: FileEntry, path: Path) -> pa.Table:
+    """Remove lines that hold no value in any column, after checking their number against the registry."""
+    if table.column('label_raw').null_count:
+        raise ValueError(f'{path} has rows without a label')
+    encoded = table.column('label_raw').combine_chunks().dictionary_encode()
+    seen: list[str] = encoded.dictionary.to_pylist()
+    blank = table.filter(pa.array([raw == '' for raw in seen], pa.bool_()).take(encoded.indices))
+    for column in blank.columns:
+        if column.null_count != len(column) and column.unique().to_pylist() != ['']:
+            raise ValueError(f'{path} has rows with an empty label that hold other values')
+    if blank.num_rows != entry.blank_rows:
+        raise ValueError(f'{path} has {blank.num_rows} lines without values; the registry records {entry.blank_rows}')
+    if not blank.num_rows:
+        return table
+    return table.filter(pa.array([raw != '' for raw in seen], pa.bool_()).take(encoded.indices))
+
+
 def _read_table(release: Release, entry: FileEntry, path: Path) -> pa.Table:
     types = {column.original: _ARROW_TYPES[column.dtype] for column in release.columns}
-    table = pacsv.read_csv(path, convert_options=pacsv.ConvertOptions(column_types=types))
+    table = pacsv.read_csv(
+        path,
+        read_options=pacsv.ReadOptions(encoding=release.encoding),
+        convert_options=pacsv.ConvertOptions(column_types=types),
+    )
     expected = [column.original for column in release.columns]
     if table.column_names != expected:
         raise ValueError(f'{path} does not have the columns recorded for {release.name} {release.version}')
-    table = table.rename_columns([column.name for column in release.columns])
+    table = _drop_blank_rows(table.rename_columns([column.name for column in release.columns]), entry, path)
+    if entry.rows is not None and table.num_rows != entry.rows:
+        raise ValueError(f'{path} has {table.num_rows} rows; the registry records {entry.rows}')
 
     encoded = table.column('label_raw').combine_chunks().dictionary_encode()
     known = {label.raw: label for label in release.labels}
@@ -96,7 +120,11 @@ def _read_table(release: Release, entry: FileEntry, path: Path) -> pa.Table:
 
 def _mapping_key(release: Release) -> str:
     """Changes whenever the recorded columns or labels do, so an old cache is not served after an edit."""
-    return hashlib.sha256(repr((release.columns, release.labels)).encode()).hexdigest()[:8]
+    parts: tuple[object, ...] = (release.columns, release.labels)
+    if release.encoding != 'utf8':
+        # Left out for the default so that caches written before encodings were recorded stay valid.
+        parts = (*parts, release.encoding)
+    return hashlib.sha256(repr(parts).encode()).hexdigest()[:8]
 
 
 def _cached_table(release: Release, entry: FileEntry, directory: Path) -> pa.Table:
@@ -123,7 +151,8 @@ def load(
 
     Columns get their clean names, the source label is kept as ``label_raw`` and
     ``label``, ``is_attack``, ``is_attempted`` and ``source_file`` are added.
-    No row is dropped or relabelled.
+    No flow is dropped or relabelled. Lines that hold no value in any column
+    are left out, and only when the registry records how many a file has.
     """
     release = get_release(name, version)
     directory = data_root(data_dir) / release.name / release.version
