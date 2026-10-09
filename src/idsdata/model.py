@@ -80,3 +80,6 @@ class Release:
     labels: tuple[Label, ...] = ()
     retrieved: str | None = None
     notes: str = ''
+    # Clean name of the column that holds the flow time, and its strptime format.
+    time_column: str | None = None
+    time_format: str | None = None
