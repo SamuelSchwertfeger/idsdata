@@ -6,59 +6,16 @@ from a real download, so a release can exist with an empty file list.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Literal
+from idsdata._cic_ids2017_engelen2021 import COLUMNS as ENGELEN_COLUMNS
+from idsdata._cic_ids2017_engelen2021 import FILES as ENGELEN_FILES
+from idsdata._cic_ids2017_engelen2021 import LABELS as ENGELEN_LABELS
+from idsdata.model import Citation, Column, FileEntry, Label, Release
+
+__all__ = ['REGISTRY', 'Citation', 'Column', 'FileEntry', 'Label', 'Release', 'UnknownDatasetError', 'get']
 
 
 class UnknownDatasetError(LookupError):
     """Raised when a dataset name or version is not in the registry."""
-
-
-@dataclass(frozen=True)
-class Citation:
-    key: str
-    authors: tuple[str, ...]
-    title: str
-    booktitle: str
-    publisher: str
-    year: int
-    pages: str
-    doi: str
-
-    def bibtex(self) -> str:
-        fields = {
-            'author': ' and '.join(self.authors),
-            'title': '{' + self.title + '}',
-            'booktitle': self.booktitle,
-            'publisher': self.publisher,
-            'year': str(self.year),
-            'pages': self.pages.replace('-', '--'),
-            'doi': self.doi,
-        }
-        width = max(len(name) for name in fields)
-        lines = [f'  {name.ljust(width)} = {{{value}}},' for name, value in fields.items()]
-        return '\n'.join([f'@inproceedings{{{self.key},', *lines, '}'])
-
-
-@dataclass(frozen=True)
-class FileEntry:
-    name: str
-    sha256: str
-    size: int
-
-
-@dataclass(frozen=True)
-class Release:
-    name: str
-    version: str
-    title: str
-    summary: str
-    homepage: str
-    download_page: str
-    access: Literal['form', 'direct']
-    terms: str
-    citations: tuple[Citation, ...]
-    files: tuple[FileEntry, ...] = ()
 
 
 SHARAFALDIN_2018 = Citation(
@@ -111,6 +68,16 @@ _RELEASES = (
             'The data is derived from CIC-IDS2017, so the original paper is cited as well.'
         ),
         citations=(ENGELEN_2021, SHARAFALDIN_2018),
+        files=ENGELEN_FILES,
+        columns=ENGELEN_COLUMNS,
+        labels=ENGELEN_LABELS,
+        retrieved='2026-10-09',
+        notes=(
+            'The authors re-uploaded the files on 2021-10-20, 2021-10-22 and 2021-11-24; '
+            'the checksums here are for the files served on the retrieval date. '
+            'Labels ending in "- Attempted" mark flows of an attack class that carry no payload; '
+            'they get is_attempted=True and is_attack=False.'
+        ),
     ),
 )
 

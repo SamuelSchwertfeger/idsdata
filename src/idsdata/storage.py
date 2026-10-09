@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from idsdata.registry import get as get_release
 
 if TYPE_CHECKING:
-    from idsdata.registry import Release
+    from idsdata.model import FileEntry, Release
 
 ENV_VAR = 'IDSDATA_DIR'
 _CHUNK_SIZE = 1024 * 1024
@@ -59,6 +59,13 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def check(entry: FileEntry, path: Path) -> None:
+    """Raise ``ChecksumMismatchError`` unless the file matches its recorded SHA-256."""
+    actual = sha256_file(path)
+    if actual != entry.sha256:
+        raise ChecksumMismatchError(path, entry.sha256, actual)
+
+
 def pointer(release: Release, directory: Path) -> str:
     """Explain where to get a release and where to put it."""
     if release.access == 'form':
@@ -91,7 +98,5 @@ def verify(name: str, version: str, data_dir: str | os.PathLike[str] | None = No
     if not present:
         raise DataNotFoundError(pointer(release, directory))
     for entry, path in present:
-        actual = sha256_file(path)
-        if actual != entry.sha256:
-            raise ChecksumMismatchError(path, entry.sha256, actual)
+        check(entry, path)
     return tuple(path for _, path in present)
