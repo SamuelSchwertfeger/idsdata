@@ -55,26 +55,26 @@ def test_verify_returns_every_file_when_all_are_present(data_dir: Path) -> None:
 
 @pytest.mark.usefixtures('synthetic_registry')
 def test_verify_checks_only_what_is_present(data_dir: Path) -> None:
-    placed = place(data_dir, 'v1', 'monday.txt')
+    placed = place(data_dir, 'v1', 'monday.csv')
     assert idsdata.verify('synthetic', 'v1', data_dir) == (placed,)
 
 
 @pytest.mark.usefixtures('synthetic_registry')
 def test_verify_uses_the_environment_variable(data_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    placed = place(data_dir, 'v1', 'archive.bin')
+    placed = place(data_dir, 'v1', 'archive.zip')
     monkeypatch.setenv('IDSDATA_DIR', str(data_dir))
     assert idsdata.verify('synthetic', 'v1') == (placed,)
 
 
 @pytest.mark.usefixtures('synthetic_registry')
 def test_verify_mismatch_reports_both_hashes(data_dir: Path) -> None:
-    _ = place(data_dir, 'v1', 'monday.txt')
-    tampered = place(data_dir, 'v1', 'tuesday.txt', b'tampered')
+    _ = place(data_dir, 'v1', 'monday.csv')
+    tampered = place(data_dir, 'v1', 'tuesday.csv', b'tampered')
     with pytest.raises(idsdata.ChecksumMismatchError) as raised:
         _ = idsdata.verify('synthetic', 'v1', data_dir)
     error = raised.value
     assert error.path == tampered
-    assert error.expected == hashlib.sha256(SYNTHETIC_FILES['tuesday.txt']).hexdigest()
+    assert error.expected == hashlib.sha256(SYNTHETIC_FILES['tuesday.csv']).hexdigest()
     assert error.actual == hashlib.sha256(b'tampered').hexdigest()
     assert error.expected in str(error)
     assert error.actual in str(error)
@@ -87,7 +87,7 @@ def test_verify_without_files_points_to_the_source(data_dir: Path) -> None:
     message = str(raised.value)
     assert 'https://example.org/download' in message
     assert str(data_dir / 'synthetic' / 'v1') in message
-    assert 'archive.bin, monday.txt, tuesday.txt' in message
+    assert 'archive.zip, monday.csv, tuesday.csv' in message
     assert 'idsdata cite synthetic v1' in message
     assert 'Made-up terms.' in message
 
@@ -124,14 +124,14 @@ def test_cli_where_prints_only_the_path_on_stdout(data_dir: Path, capsys: pytest
 
 @pytest.mark.usefixtures('synthetic_registry')
 def test_cli_where_is_quiet_once_the_directory_exists(data_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    _ = place(data_dir, 'v1', 'monday.txt')
+    _ = place(data_dir, 'v1', 'monday.csv')
     assert cli.main(['where', 'synthetic', 'v1', '--data-dir', str(data_dir)]) == 0
     assert capsys.readouterr().err == ''
 
 
 @pytest.mark.usefixtures('synthetic_registry')
 def test_cli_verify_ok(data_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    placed = place(data_dir, 'v1', 'monday.txt')
+    placed = place(data_dir, 'v1', 'monday.csv')
     assert cli.main(['verify', 'synthetic', 'v1', '--data-dir', str(data_dir)]) == 0
     assert capsys.readouterr().out.strip() == f'ok  {placed}'
 
@@ -149,7 +149,7 @@ def test_cli_verify_failures_exit_1(
     version: str, tamper: bool, expected: str, data_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     if tamper:
-        _ = place(data_dir, 'v1', 'monday.txt', b'tampered')
+        _ = place(data_dir, 'v1', 'monday.csv', b'tampered')
     assert cli.main(['verify', 'synthetic', version, '--data-dir', str(data_dir)]) == 1
     captured = capsys.readouterr()
     assert captured.out == ''

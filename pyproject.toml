@@ -31,3 +31,9 @@ dev = [
 [tool.basedpyright]
 include = ["src", "tests"]
 pythonVersion = "3.10"
+# pandas and pyarrow ship no type stubs, so values that come from them are unknown.
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
