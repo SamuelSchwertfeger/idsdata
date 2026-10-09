@@ -7,15 +7,19 @@ from idsdata import cli
 
 def test_list(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(['list']) == 0
-    assert capsys.readouterr().out.splitlines() == ['cic-ids2017 original', 'cic-ids2017 engelen2021']
+    assert capsys.readouterr().out.splitlines() == [
+        'cic-ids2017 original-flows',
+        'cic-ids2017 original-ml',
+        'cic-ids2017 engelen2021',
+    ]
 
 
 def test_info(capsys: pytest.CaptureFixture[str]) -> None:
-    assert cli.main(['info', 'cic-ids2017', 'original']) == 0
+    assert cli.main(['info', 'cic-ids2017', 'original-flows']) == 0
     out = capsys.readouterr().out
     assert 'https://www.unb.ca/cic/datasets/ids-2017.html' in out
     assert 'request form' in out
-    assert 'none recorded yet' in out
+    assert 'GeneratedLabelledFlows.zip' in out
 
 
 def test_cite_matches_the_python_api(capsys: pytest.CaptureFixture[str]) -> None:

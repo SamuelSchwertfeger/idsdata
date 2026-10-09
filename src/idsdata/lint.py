@@ -155,8 +155,8 @@ def _listed(names: Sequence[str]) -> str:
     return shown if len(names) <= _SHOWN else f'{shown} and {len(names) - _SHOWN} more'
 
 
-def _read_header(path: Path) -> list[str]:
-    with path.open(encoding='utf-8-sig', errors='replace', newline='') as handle:
+def _read_header(path: Path, encoding: str) -> list[str]:
+    with path.open(encoding=encoding, errors='replace', newline='') as handle:
         return next(csv.reader(handle), [])
 
 
@@ -196,15 +196,18 @@ def _labels(values: pd.Series, known: frozenset[str] | None) -> list[str]:
     return details
 
 
-def lint(path: str | os.PathLike[str], labels: Sequence[str] | None = None) -> list[Finding]:
+def lint(
+    path: str | os.PathLike[str], labels: Sequence[str] | None = None, encoding: str = 'utf-8-sig'
+) -> list[Finding]:
     """Check one CSV file and return what was found, in rule order.
 
     ``labels`` is the set of label strings the file is allowed to contain. When
-    it is left out, only missing labels are reported.
+    it is left out, only missing labels are reported. Bytes that ``encoding``
+    cannot decode are read as the replacement character.
     """
     source = Path(path)
-    header = _read_header(source)
-    frame = pd.read_csv(source, encoding='utf-8', encoding_errors='replace', low_memory=False)
+    header = _read_header(source, encoding)
+    frame = pd.read_csv(source, encoding=encoding, encoding_errors='replace', low_memory=False)
     label_positions = [position for position, name in enumerate(header) if clean_name(name) == 'label']
     label_position = label_positions[-1] if label_positions else None
 
@@ -287,6 +290,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not args.files:
         parser.error('give at least one CSV file')
     labels: list[str] | None = None
+    encoding = 'utf-8-sig'
     if args.release is not None:
         try:
             release = get_release(args.release[0], args.release[1])
@@ -297,14 +301,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f'ids-lint: no label strings are recorded for {release.name} {release.version} yet', file=sys.stderr)
             return 2
         labels = [label.raw for label in release.labels]
+        encoding = 'utf-8-sig' if release.encoding == 'utf8' else release.encoding
     errors = warnings = 0
     for name in args.files:
         try:
-            findings = lint(name, labels)
+            findings = lint(name, labels, encoding)
         except (OSError, ValueError) as error:
             print(f'ids-lint: {name}: {error}', file=sys.stderr)
             return 2
-        print(_format_findings(name, findings))
+        # A label can hold a character the console cannot show; print it escaped instead of failing.
+        console = sys.stdout.encoding or 'utf-8'
+        print(_format_findings(name, findings).encode(console, 'backslashreplace').decode(console))
         errors += sum(finding.rule.severity == 'error' for finding in findings)
         warnings += sum(finding.rule.severity == 'warn' for finding in findings)
     print(f'{errors} errors, {warnings} warnings', file=sys.stderr)
