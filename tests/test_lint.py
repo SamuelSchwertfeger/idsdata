@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import re
+
+from pathlib import Path
 
 import pytest
 
 from idsdata import lint as linting
 from idsdata.lint import RULES, lint, main
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 # Everything below is made up for the tests.
 CLEAN = b'Flow Duration,Rate/s,Label\n1,1.5,BENIGN\n2,2.5,Probe\n3,3.5,BENIGN\n'
@@ -169,3 +168,14 @@ def test_cli_needs_a_file() -> None:
     with pytest.raises(SystemExit) as raised:
         _ = main([])
     assert raised.value.code == 2
+
+
+def test_the_readme_rule_table_matches_the_rules() -> None:
+    readme = (Path(__file__).parent.parent / 'README.md').read_text(encoding='utf-8')
+    table = readme.split('<!-- rules:start -->')[1].split('<!-- rules:end -->')[0]
+    rows = [line for line in table.strip().splitlines()[2:] if line]
+    assert len(rows) == len(RULES)
+    for row, rule in zip(rows, RULES, strict=True):
+        cells = [cell.strip() for cell in row.strip('|').split('|')]
+        assert cells[:4] == [rule.id, rule.name, rule.severity, rule.explanation]
+        assert re.findall(r'\((https://[^)]+)\)', cells[4]) == [source.url for source in rule.sources]
