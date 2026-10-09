@@ -1,5 +1,7 @@
 # idsdata
 
+[![PyPI](https://img.shields.io/pypi/v/idsdata)](https://pypi.org/project/idsdata/) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23271711.svg)](https://doi.org/10.5281/zenodo.23271711)
+
 Load intrusion-detection datasets by name and version, check them against recorded SHA-256 hashes, and get the right citation. `ids-lint` flags known quality problems in a dataset CSV file.
 
 Papers that say "we used CIC-IDS2017" can mean several different files. `idsdata` makes the version part of the name, and refuses to load a file whose hash does not match.
@@ -97,7 +99,7 @@ Files are kept in `~/.cache/idsdata/<name>/<version>/`. Set `IDSDATA_DIR` or pas
 
 ## How to cite
 
-To cite `idsdata` itself, use `CITATION.cff` (the "Cite this repository" button on GitHub).
+To cite `idsdata` itself, use `CITATION.cff` (the "Cite this repository" button on GitHub) or the DOI [10.5281/zenodo.23271711](https://doi.org/10.5281/zenodo.23271711), which always points to the latest version.
 
 Cite the papers behind the data you use. This prints the BibTeX entries:
 
