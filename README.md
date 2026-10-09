@@ -41,6 +41,13 @@ print(idsdata.cite('cic-ids2017', 'engelen2021'))
 | `is_attempted` | `True` for flows the corrected release marks as "Attempted": part of an attack class, but with no malicious payload. These have `is_attack == False`. |
 | `source_file` | the file the row came from |
 
+Keeping "Attempted" flows out of `is_attack` is a choice this package makes, following the corrected release. It means `is_attack` and the class name can disagree: a `dos_hulk_attempted` row has `is_attack == False`. Decide what you want before training a binary classifier:
+
+```python
+flows = flows[~flows['is_attempted']]  # drop them
+attack = flows['is_attack'] | flows['is_attempted']  # or count them as attacks
+```
+
 The first load reads the CSV files and writes a parquet cache next to them. Later loads read the cache.
 
 ## Datasets
@@ -58,7 +65,7 @@ No file hashes are recorded for `original` yet, so it cannot be verified or load
 - Nothing is mirrored. Files come from the official host, or you download them yourself.
 - `idsdata download` works only where the host offers a direct link. It prints the terms and asks before it fetches anything (`--yes` skips the question).
 - A release behind a request form is never fetched by the package. You fill in the form and place the files; the package checks them.
-- Every recorded hash was computed from a real download, and the registry records the date of that download. If the host replaces a file, verification fails and says so.
+- Every recorded hash was computed from a real download, and the registry records the date of that download. If the host replaces a file, verification fails and says so. It also fails when a table is missing and the archive it comes from is not there.
 
 Files are kept in `~/.cache/idsdata/<name>/<version>/`. Set `IDSDATA_DIR` or pass `--data-dir` to use another place. `idsdata where NAME VERSION` prints the directory.
 
@@ -96,7 +103,7 @@ The exit status is 1 when a rule of severity `error` fires. With `--strict`, war
 | IDS006 | constant-columns | warn | A column that holds a single value carries no information. | [Rosay et al. 2022](https://doi.org/10.5220/0010774000003120) |
 <!-- rules:end -->
 
-`ids-lint --rules` prints the full reference for each source. The source of IDS001 is the authors' documentation page, which is not peer reviewed. Flood et al. describe near-duplicate flows; IDS004 reports only exact repeats.
+`ids-lint --rules` prints the full reference for each source. The source of IDS001 is the authors' documentation page, which is not peer reviewed. Flood et al. describe near-duplicate flows; IDS004 reports only exact repeats. The sources of IDS003 describe flows that carry the wrong label; IDS003 can only see label strings that are missing or that a release does not define.
 
 The linter reports and changes nothing. A warning is a prompt to decide, and what to do with the flagged rows or columns is up to you.
 

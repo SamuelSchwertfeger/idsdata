@@ -54,9 +54,23 @@ def test_verify_returns_every_file_when_all_are_present(data_dir: Path) -> None:
 
 
 @pytest.mark.usefixtures('synthetic_registry')
-def test_verify_checks_only_what_is_present(data_dir: Path) -> None:
-    placed = place(data_dir, 'v1', 'monday.csv')
-    assert idsdata.verify('synthetic', 'v1', data_dir) == (placed,)
+def test_verify_accepts_tables_without_their_archive(data_dir: Path) -> None:
+    placed = [place(data_dir, 'v1', name) for name in ('monday.csv', 'tuesday.csv')]
+    assert idsdata.verify('synthetic', 'v1', data_dir) == tuple(placed)
+
+
+@pytest.mark.usefixtures('synthetic_registry')
+def test_verify_names_a_table_that_is_missing(data_dir: Path) -> None:
+    _ = place(data_dir, 'v1', 'monday.csv')
+    with pytest.raises(idsdata.DataNotFoundError, match='missing: tuesday.csv'):
+        _ = idsdata.verify('synthetic', 'v1', data_dir)
+
+
+@pytest.mark.usefixtures('synthetic_registry')
+def test_verify_still_checks_what_is_present_when_a_table_is_missing(data_dir: Path) -> None:
+    _ = place(data_dir, 'v1', 'monday.csv', b'tampered')
+    with pytest.raises(idsdata.ChecksumMismatchError):
+        _ = idsdata.verify('synthetic', 'v1', data_dir)
 
 
 @pytest.mark.usefixtures('synthetic_registry')
@@ -131,9 +145,16 @@ def test_cli_where_is_quiet_once_the_directory_exists(data_dir: Path, capsys: py
 
 @pytest.mark.usefixtures('synthetic_registry')
 def test_cli_verify_ok(data_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    placed = place(data_dir, 'v1', 'monday.csv')
+    placed = place(data_dir, 'v1', 'archive.zip')
     assert cli.main(['verify', 'synthetic', 'v1', '--data-dir', str(data_dir)]) == 0
     assert capsys.readouterr().out.strip() == f'ok  {placed}'
+
+
+@pytest.mark.usefixtures('synthetic_registry')
+def test_cli_verify_reports_a_missing_table(data_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    _ = place(data_dir, 'v1', 'monday.csv')
+    assert cli.main(['verify', 'synthetic', 'v1', '--data-dir', str(data_dir)]) == 1
+    assert 'missing: tuesday.csv' in capsys.readouterr().err
 
 
 @pytest.mark.usefixtures('synthetic_registry')
