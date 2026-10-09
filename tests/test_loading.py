@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import math
 import re
 
@@ -10,7 +11,7 @@ import pytest
 import idsdata
 
 from idsdata import loading, registry
-from tests.conftest import MONDAY, make_archive, make_release, place, register
+from tests.conftest import MONDAY, TUESDAY, make_archive, make_release, place, register
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -107,7 +108,7 @@ def test_load_writes_and_reuses_the_parquet_cache(data_dir: Path, monkeypatch: p
     first = idsdata.load('synthetic', 'v1', data_dir)
     cached = sorted(path.name for path in (data_dir / 'synthetic' / 'v1' / 'cache').iterdir())
     assert len(cached) == 2
-    assert all(re.fullmatch(r'(monday|tuesday)\.[0-9a-f]{12}\.v1\.parquet', name) for name in cached)
+    assert all(re.fullmatch(r'(monday|tuesday)\.[0-9a-f]{12}\.[0-9a-f]{8}\.v1\.parquet', name) for name in cached)
 
     def fail(*_args: object) -> None:
         raise AssertionError('the CSV was read again')
@@ -115,6 +116,27 @@ def test_load_writes_and_reuses_the_parquet_cache(data_dir: Path, monkeypatch: p
     monkeypatch.setattr(loading, '_read_table', fail)
     second = idsdata.load('synthetic', 'v1', data_dir)
     assert second.equals(first)
+
+
+def test_load_does_not_reuse_the_cache_after_the_label_mapping_changes(
+    data_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = make_release('v1', {'monday.csv': MONDAY, 'tuesday.csv': TUESDAY})
+    register(monkeypatch, release)
+    _ = place(data_dir, 'v1', 'monday.csv')
+    _ = place(data_dir, 'v1', 'tuesday.csv')
+    assert int(idsdata.load('synthetic', 'v1', data_dir)['is_attack'].sum()) == 1
+    labels = tuple(dataclasses.replace(label, is_attack=label.raw != 'BENIGN') for label in release.labels)
+    register(monkeypatch, dataclasses.replace(release, labels=labels))
+    assert int(idsdata.load('synthetic', 'v1', data_dir)['is_attack'].sum()) == 2
+
+
+def test_load_names_an_archive_that_lacks_a_table(data_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    archive = make_archive({'monday.csv': MONDAY})
+    register(monkeypatch, make_release('v1', {'archive.zip': archive, 'monday.csv': MONDAY, 'tuesday.csv': TUESDAY}))
+    _ = place(data_dir, 'v1', 'archive.zip', archive)
+    with pytest.raises(ValueError, match='has no member named tuesday.csv'):
+        _ = idsdata.load('synthetic', 'v1', data_dir)
 
 
 def test_load_rejects_unexpected_columns(data_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
