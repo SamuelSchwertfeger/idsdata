@@ -6,10 +6,8 @@ Papers that say "we used CIC-IDS2017" can mean several different files. `idsdata
 
 ## Install
 
-`idsdata` is not on PyPI yet. Install it from the repository:
-
 ```console
-pip install git+https://github.com/SamuelSchwertfeger/idsdata
+pip install idsdata
 ```
 
 It needs Python 3.10 or newer and installs pandas and pyarrow.
@@ -98,6 +96,8 @@ Both original versions hold the same 2,830,743 flows in 15 classes. They are kep
 Files are kept in `~/.cache/idsdata/<name>/<version>/`. Set `IDSDATA_DIR` or pass `--data-dir` to use another place. `idsdata where NAME VERSION` prints the directory.
 
 ## How to cite
+
+To cite `idsdata` itself, use `CITATION.cff` (the "Cite this repository" button on GitHub).
 
 Cite the papers behind the data you use. This prints the BibTeX entries:
 
