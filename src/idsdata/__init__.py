@@ -4,11 +4,15 @@ from importlib.metadata import version as _package_version
 
 from idsdata import registry
 from idsdata.registry import Citation, FileEntry, Release, UnknownDatasetError
+from idsdata.storage import ChecksumMismatchError, ChecksumsUnavailableError, DataNotFoundError, verify
 
 __version__ = _package_version('idsdata')
 
 __all__ = [
+    'ChecksumMismatchError',
+    'ChecksumsUnavailableError',
     'Citation',
+    'DataNotFoundError',
     'FileEntry',
     'Release',
     'UnknownDatasetError',
@@ -16,6 +20,7 @@ __all__ = [
     'cite',
     'datasets',
     'info',
+    'verify',
 ]
 
 
