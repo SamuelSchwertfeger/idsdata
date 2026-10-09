@@ -9,10 +9,20 @@ authors = [
     { name = "Samuel Justus Schwertfeger", email = "113480134+SamuelSchwertfeger@users.noreply.github.com" }
 ]
 requires-python = ">=3.10"
+keywords = ["intrusion detection", "datasets", "CIC-IDS2017", "reproducibility"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+]
 dependencies = [
     "pandas>=2.3.3",
     "pyarrow>=25.0.1",
 ]
+
+[project.urls]
+Repository = "https://github.com/SamuelSchwertfeger/idsdata"
+Issues = "https://github.com/SamuelSchwertfeger/idsdata/issues"
 
 [project.scripts]
 idsdata = "idsdata.cli:main"
