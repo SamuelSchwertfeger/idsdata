@@ -71,6 +71,8 @@ _RELEASES = (
         files=ENGELEN_FILES,
         columns=ENGELEN_COLUMNS,
         labels=ENGELEN_LABELS,
+        time_column='timestamp',
+        time_format='%d/%m/%Y %I:%M:%S %p',
         retrieved='2026-10-09',
         notes=(
             'The authors re-uploaded the files on 2021-10-20, 2021-10-22 and 2021-11-24; '

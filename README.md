@@ -50,6 +50,26 @@ attack = flows['is_attack'] | flows['is_attempted']  # or count them as attacks
 
 The first load reads the CSV files and writes a parquet cache next to them. Later loads read the cache.
 
+## Train/test splits
+
+```python
+train, test = idsdata.split('cic-ids2017', 'engelen2021', 'time')
+```
+
+A split has a name, and the name always means the same rows. Both splits put 20% of the flows in the test set and keep every class on both sides.
+
+| split | how the test set is chosen | use it for |
+|---|---|---|
+| `time` (default) | For each class in each source file, the latest 20% of the flows by timestamp | New results. A model is tested on flows that come after the ones it was trained on. |
+| `random` | 20% of each class, drawn with a fixed seed | Comparison with earlier work that shuffled the rows. Near-duplicate flows land on both sides, so scores are optimistic. |
+
+Things to know:
+
+- The cut is made per class, not once per day. Each attack runs in a short window, so a single cut-off time per day would leave most attack classes out of the test set.
+- Timestamps have one-second resolution. Flows that share the second at the cut keep the order they have in the source file.
+- A class with two or more flows always gets at least one test flow; a class with a single flow stays in train. Some classes are very small, so their test sets are tiny.
+- A split is of the whole release. Filter afterwards, for example `train[~train['is_attempted']]`.
+
 ## Datasets
 
 | name | version | what it is | how you get it |
@@ -109,7 +129,6 @@ The linter reports and changes nothing. A warning is a prompt to decide, and wha
 
 ## Not in this version
 
-- Train/test splits. The split design is still open.
 - Checksums for the `original` release.
 - Other datasets.
 
