@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dataset files never belong in this repo
+*.csv
+*.parquet
+*.zip
+*.pcap
