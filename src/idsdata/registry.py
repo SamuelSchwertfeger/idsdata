@@ -9,6 +9,7 @@ from __future__ import annotations
 from idsdata._cic_ids2017_engelen2021 import COLUMNS as ENGELEN_COLUMNS
 from idsdata._cic_ids2017_engelen2021 import FILES as ENGELEN_FILES
 from idsdata._cic_ids2017_engelen2021 import LABELS as ENGELEN_LABELS
+from idsdata._cic_ids2017_original import FLOWS_COLUMNS, FLOWS_FILES, FLOWS_LABELS, ML_COLUMNS, ML_FILES, ML_LABELS
 from idsdata.model import Citation, Column, FileEntry, Label, Release
 
 __all__ = ['REGISTRY', 'Citation', 'Column', 'FileEntry', 'Label', 'Release', 'UnknownDatasetError', 'get']
@@ -40,20 +41,62 @@ ENGELEN_2021 = Citation(
     doi='10.1109/SPW53761.2021.00009',
 )
 
+_ORIGINAL_TERMS = (
+    'No licence is stated. The publisher makes the dataset publicly available for researchers '
+    'and asks users to cite the related paper.'
+)
+_ORIGINAL_NOTES = (
+    'After the request form, the archive is in the CSVs folder. '
+    'The column " Fwd Header Length" appears twice in every file; the second one is named fwd_header_length_1. '
+    'The timestamps are not recorded in one format, so there is no time split for the original versions. '
+)
+
 _RELEASES = (
     Release(
         name='cic-ids2017',
-        version='original',
-        title='CIC-IDS2017',
-        summary='Original release from the Canadian Institute for Cybersecurity, University of New Brunswick.',
+        version='original-flows',
+        title='CIC-IDS2017, labelled flows',
+        summary=(
+            'Original release from the Canadian Institute for Cybersecurity, University of New Brunswick: '
+            'the flows with their ids, addresses and timestamps (GeneratedLabelledFlows.zip).'
+        ),
         homepage='https://www.unb.ca/cic/datasets/ids-2017.html',
         download_page='http://cicresearch.ca/CICDataset/CIC-IDS-2017/',
         access='form',
-        terms=(
-            'No licence is stated. The publisher makes the dataset publicly available for researchers '
-            'and asks users to cite the related paper.'
-        ),
+        terms=_ORIGINAL_TERMS,
         citations=(SHARAFALDIN_2018,),
+        files=FLOWS_FILES,
+        columns=FLOWS_COLUMNS,
+        labels=FLOWS_LABELS,
+        encoding='cp1252',
+        retrieved='2026-10-09',
+        notes=_ORIGINAL_NOTES
+        + (
+            'Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv holds 288602 lines without any value; '
+            'load leaves them out. The files are read as Windows-1252, '
+            'which makes the dash in the three web attack labels an en dash. '
+            '21 columns of whole numbers are written with a decimal point in some files and are read as double.'
+        ),
+    ),
+    Release(
+        name='cic-ids2017',
+        version='original-ml',
+        title='CIC-IDS2017, machine learning CSVs',
+        summary=(
+            'Original release from the Canadian Institute for Cybersecurity, University of New Brunswick: '
+            'the same flows without ids, addresses and timestamps (MachineLearningCSV.zip).'
+        ),
+        homepage='https://www.unb.ca/cic/datasets/ids-2017.html',
+        download_page='http://cicresearch.ca/CICDataset/CIC-IDS-2017/',
+        access='form',
+        terms=_ORIGINAL_TERMS,
+        citations=(SHARAFALDIN_2018,),
+        files=ML_FILES,
+        columns=ML_COLUMNS,
+        labels=ML_LABELS,
+        retrieved='2026-10-09',
+        notes=_ORIGINAL_NOTES
+        + 'The three web attack labels hold the Unicode replacement character (U+FFFD) where the dash was.',
     ),
     Release(
         name='cic-ids2017',
@@ -71,6 +114,8 @@ _RELEASES = (
         files=ENGELEN_FILES,
         columns=ENGELEN_COLUMNS,
         labels=ENGELEN_LABELS,
+        time_column='timestamp',
+        time_format='%d/%m/%Y %I:%M:%S %p',
         retrieved='2026-10-09',
         notes=(
             'The authors re-uploaded the files on 2021-10-20, 2021-10-22 and 2021-11-24; '

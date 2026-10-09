@@ -87,8 +87,9 @@ def test_download_refuses_releases_it_may_not_fetch(data_dir: Path, host: FakeHo
     assert not data_dir.exists()
 
 
-def test_the_original_release_is_never_fetched() -> None:
-    assert downloading.downloadable(idsdata.info('cic-ids2017', 'original')) == ()
+@pytest.mark.parametrize('version', ['original-flows', 'original-ml'])
+def test_the_original_versions_are_never_fetched(version: str) -> None:
+    assert downloading.downloadable(idsdata.info('cic-ids2017', version)) == ()
 
 
 def test_recorded_download_urls_are_https() -> None:

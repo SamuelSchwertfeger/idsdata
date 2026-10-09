@@ -37,6 +37,7 @@ __all__ = [
     'download',
     'info',
     'load',
+    'split',
     'verify',
 ]
 
@@ -76,3 +77,20 @@ def load(
     from idsdata.loading import load as _load
 
     return _load(name, version, data_dir, files)
+
+
+def split(
+    name: str,
+    version: str,
+    split: str = 'time',
+    data_dir: str | os.PathLike[str] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load a whole release and return it as ``(train, test)``.
+
+    ``time``: for each class in each source file, the earliest 80% of the flows
+    are train and the latest 20% are test. ``random``: 20% of each class, drawn
+    with a fixed seed, is test. Rows keep the index and order ``load`` gives them.
+    """
+    from idsdata.splitting import split as _split
+
+    return _split(name, version, split, data_dir)

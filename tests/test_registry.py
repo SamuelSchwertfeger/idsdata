@@ -6,11 +6,11 @@ import idsdata
 
 from idsdata import registry
 
-RELEASES = [('cic-ids2017', 'original'), ('cic-ids2017', 'engelen2021')]
+RELEASES = [('cic-ids2017', 'original-flows'), ('cic-ids2017', 'original-ml'), ('cic-ids2017', 'engelen2021')]
 
 
-def test_datasets_lists_both_versions() -> None:
-    assert idsdata.datasets() == {'cic-ids2017': ('original', 'engelen2021')}
+def test_datasets_lists_every_version() -> None:
+    assert idsdata.datasets() == {'cic-ids2017': ('original-flows', 'original-ml', 'engelen2021')}
 
 
 @pytest.mark.parametrize(['name', 'version'], RELEASES)
@@ -24,7 +24,8 @@ def test_info_returns_matching_release(name: str, version: str) -> None:
 
 
 def test_access_modes() -> None:
-    assert idsdata.info('cic-ids2017', 'original').access == 'form'
+    assert idsdata.info('cic-ids2017', 'original-flows').access == 'form'
+    assert idsdata.info('cic-ids2017', 'original-ml').access == 'form'
     assert idsdata.info('cic-ids2017', 'engelen2021').access == 'direct'
 
 
@@ -41,12 +42,12 @@ def test_unknown_dataset_names_the_known_ones() -> None:
 
 
 def test_unknown_version_names_the_known_ones() -> None:
-    with pytest.raises(idsdata.UnknownDatasetError, match='known versions: original, engelen2021'):
+    with pytest.raises(idsdata.UnknownDatasetError, match='known versions: original-flows, original-ml, engelen2021'):
         _ = idsdata.info('cic-ids2017', 'liu2022')
 
 
 def test_cite_original() -> None:
-    bibtex = idsdata.cite('cic-ids2017', 'original')
+    bibtex = idsdata.cite('cic-ids2017', 'original-ml')
     assert bibtex.startswith('@inproceedings{sharafaldin2018toward,')
     assert '10.5220/0006639801080116' in bibtex
     assert 'pages     = {108--116},' in bibtex

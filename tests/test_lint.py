@@ -75,6 +75,13 @@ def test_labels_are_checked_against_a_release_when_given(tmp_path: Path) -> None
     assert found(path, ['BENIGN']) == {'label-strings': ["label strings the release does not define: 'Probe'"]}
 
 
+def test_labels_are_read_with_the_given_encoding(tmp_path: Path) -> None:
+    path = write(tmp_path, CLEAN.replace(b'Probe', b'Web \x96 XSS'))
+    labels = ['BENIGN', 'Web \u2013 XSS']
+    assert lint(path, labels, 'cp1252') == []
+    assert found(path, labels) == {'label-strings': ["label strings the release does not define: 'Web \ufffd XSS'"]}
+
+
 def test_a_file_without_a_label_column(tmp_path: Path) -> None:
     content = b'Flow Duration,Rate/s\n1,1.5\n2,2.5\n'
     assert found(write(tmp_path, content)) == {'label-strings': ['the file has no column named Label']}
